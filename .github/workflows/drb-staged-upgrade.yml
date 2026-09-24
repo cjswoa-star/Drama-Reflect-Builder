@@ -1,0 +1,31 @@
+name: Drama Reflect Builder staged upgrade
+
+on:
+  push:
+    paths:
+      - 'tools/apply_next.py'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Apply staged upgrade
+        run: python tools/apply_next.py
+      - name: Commit index
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "No index change"
+          else
+            VER=$(grep -o 'version-badge">V[^<]*' index.html | head -1 | sed 's/version-badge">//')
+            git commit -m "Apply ${VER:-staged} Drama Reflect Builder upgrade"
+            git push
+          fi
