@@ -1,0 +1,30 @@
+name: Apply Drama Reflect Builder V9-4
+
+on:
+  push:
+    paths:
+      - 'tools/apply_v94.py'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-v94:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Apply verified V9-4 snapshot
+        run: python tools/apply_v94.py
+      - name: Commit index
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "No index change"
+          else
+            git commit -m "Apply V9-4 class results build"
+            git push
+          fi
