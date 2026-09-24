@@ -1,0 +1,130 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isGoogleUser() {
+      return signedIn()
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    function isAnonymousUser() {
+      return signedIn()
+        && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    function sessionDoc(sessionId) {
+      return get(/databases/$(database)/documents/sessions/$(sessionId));
+    }
+
+    function isTeacher(sessionId) {
+      return isGoogleUser()
+        && sessionDoc(sessionId).data.teacherUid == request.auth.uid;
+    }
+
+    function isParticipant(sessionId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/sessions/$(sessionId)/participants/$(request.auth.uid));
+    }
+
+    match /sessions/{sessionId} {
+      allow create: if isGoogleUser()
+        && request.resource.data.teacherUid == request.auth.uid
+        && request.resource.data.status == 'draft';
+
+      allow read: if isTeacher(sessionId)
+        || (signedIn() && resource.data.entryOpen == true)
+        || isParticipant(sessionId);
+
+      allow update, delete: if isTeacher(sessionId);
+
+      match /participants/{participantId} {
+        allow create: if isAnonymousUser()
+          && participantId == request.auth.uid
+          && sessionDoc(sessionId).data.entryOpen == true
+          && request.resource.data.keys().hasOnly([
+            'uid', 'name', 'role', 'status', 'currentBlock',
+            'joinedAt', 'lastSeen'
+          ])
+          && request.resource.data.keys().hasAll([
+            'uid', 'name', 'role', 'status', 'currentBlock'
+          ])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.role == 'student'
+          && request.resource.data.status == 'waiting'
+          && request.resource.data.currentBlock == 0
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 1
+          && request.resource.data.name.size() <= 20;
+
+        allow read: if isTeacher(sessionId)
+          || (signedIn() && participantId == request.auth.uid);
+
+        allow update: if isTeacher(sessionId)
+          || (
+            isAnonymousUser()
+            && participantId == request.auth.uid
+            && request.resource.data.uid == resource.data.uid
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'name', 'status', 'currentBlock', 'lastSeen'
+            ])
+            && request.resource.data.status in ['waiting', 'active', 'complete']
+            && request.resource.data.currentBlock is int
+            && request.resource.data.currentBlock >= 0
+          );
+
+        allow delete: if isTeacher(sessionId);
+      }
+
+      match /responses/{studentId} {
+        allow create: if isAnonymousUser()
+          && studentId == request.auth.uid
+          && isParticipant(sessionId)
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['uid', 'blocks', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['uid']);
+
+        allow read: if isTeacher(sessionId)
+          || (
+            isAnonymousUser()
+            && studentId == request.auth.uid
+            && isParticipant(sessionId)
+          );
+
+        allow update: if isTeacher(sessionId)
+          || (
+            isAnonymousUser()
+            && studentId == request.auth.uid
+            && isParticipant(sessionId)
+            && resource.data.uid == request.auth.uid
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.keys().hasOnly(['uid', 'blocks', 'updatedAt'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['blocks', 'updatedAt'])
+          );
+
+        allow delete: if isTeacher(sessionId);
+      }
+    }
+
+    match /joinCodes/{code} {
+      allow get: if signedIn();
+      allow list: if false;
+
+      allow create: if isGoogleUser()
+        && request.resource.data.teacherUid == request.auth.uid
+        && request.resource.data.sessionId is string;
+
+      allow update, delete: if isGoogleUser()
+        && resource.data.teacherUid == request.auth.uid;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
