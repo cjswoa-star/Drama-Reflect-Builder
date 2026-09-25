@@ -1,0 +1,59 @@
+name: DRB V9-8.9 modal hotfix
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/drb-v989-hotfix.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Patch index.html
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          if 'function modal(){' in s:
+              raise SystemExit('modal already exists')
+          s=s.replace('V9-8.8','V9-8.9')
+          s=s.replace('&v=988','&v=989').replace('?student=1&v=988','?student=1&v=989')
+          modal=r'''function modal(){
+ const groups=[
+  ['기본 흐름',['intro','choice','reflection','final']],
+  ['감정·성찰',['emotion','mood','connection']],
+  ['만남·공유',['meet','share']]
+ ];
+ return `<div class="modalbg"><div class="modal" role="dialog" aria-modal="true" aria-label="단계 추가"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><h3>단계 추가</h3><p>현재 선택한 단계 다음에 넣을 활동을 고르세요.</p></div><button class="btn ghost" data-close aria-label="닫기">✕ 닫기</button></div>${groups.map(([title,types])=>`<div class="category-title">${title}</div><div class="blockgrid">${types.map(type=>{const c=catalog[type];return `<button type="button" class="block" data-type="${type}" style="text-align:left"><div class="bi" style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:${c.color}">${c.icon}</div><b>${c.label}</b><small>${c.sub}<br>${c.desc}</small></button>`}).join('')}</div>`).join('')}</div></div>`
+}
+'''
+          marker='function commonTitle(b){'
+          if marker not in s: raise SystemExit('commonTitle marker not found')
+          s=s.replace(marker,modal+marker,1)
+          old="if(code.includes('network-request-failed')||code.includes('unavailable'))return 'Firebase 서버와 통신하지 못했습니다. 학교망·방화벽 또는 인터넷 연결을 확인한 뒤 다시 시도해 주세요.';"
+          new="if(code.includes('firebase-sdk-unavailable'))return 'Firebase SDK를 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.';if(code.includes('network-request-failed')||code.includes('unavailable'))return 'Firebase 서버와 통신하지 못했습니다. 학교망·방화벽 또는 인터넷 연결을 확인한 뒤 다시 시도해 주세요.';"
+          if old in s: s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+          parts=re.findall(r'<script>([\s\S]*?)</script>',s)
+          Path('/tmp/drb.js').write_text(parts[-1],encoding='utf-8')
+          PY
+          node --check /tmp/drb.js
+          grep -q 'function modal(){' index.html
+          grep -q 'V9-8.9' index.html
+      - name: Commit patch and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name 'chatgpt-drb-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          rm -f .github/workflows/drb-v989-hotfix.yml
+          git add index.html .github/workflows/drb-v989-hotfix.yml
+          git commit -m 'fix: restore step modal and unblock builder V9-8.9'
+          git push
