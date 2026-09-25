@@ -640,12 +640,7 @@ function act(a){const blocks=state.activity.blocks,i=blocks.findIndex(x=>x.id===
 window.addEventListener('online',()=>{if(state.studentMode||state.sessionSetup)render()});
 window.addEventListener('offline',()=>{if(state.studentMode||state.sessionSetup)render()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&state.studentJoin?.joined&&fbAuth?.currentUser?.isAnonymous){const ref=fbDb.collection('sessions').doc(state.studentJoin.sessionId);startStudentHeartbeat(ref,fbAuth.currentUser.uid)}});
-if(state.studentMode)tryRestoreStudentSession();
-render();
-})();
-</script>
-<script>
-(()=>{
+/* V9-9.0 mood → emotion linkage: inside the main app IIFE. */
   const V990='V9-9.0';
   function uniq(xs){return [...new Set((xs||[]).map(x=>String(x||'').trim()).filter(Boolean))]}
   function sourceMode(b){return b?.emotionSource==='independent'?'independent':'mood'}
@@ -675,9 +670,11 @@ render();
 
   const oldBind=bind;bind=function(){oldBind();document.querySelectorAll('[data-emotion-source]').forEach(el=>el.onclick=()=>{current().emotionSource=el.dataset.emotionSource==='independent'?'independent':'mood';autosave();render()})};
   const oldValidate=validateForClass;validateForClass=function(a){const errs=oldValidate(a);(a?.blocks||[]).forEach((b,i)=>{if(b.type==='emotion'&&sourceMode(b)==='mood'&&!a.blocks.slice(0,i).some(x=>x.type==='mood'))errs.push(`${i+1}단계(감정 탐색)는 앞선 무드미터와 연결되어 있지만 앞쪽에 무드미터 단계가 없습니다.`)});return errs};
-  document.querySelectorAll('.version-badge').forEach(el=>el.textContent=V990);try{render()}catch(e){console.error('V9-9.0 patch render',e)}
-})();
 
+if(state.studentMode)tryRestoreStudentSession();
+render();
+})();
 </script>
+
 </body>
 </html>
