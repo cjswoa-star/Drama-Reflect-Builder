@@ -1,0 +1,20 @@
+oDCV++SqmJ0nyUhKI2aG/XbNbDBKNzPjRp9HthzvEWb2opBWIT7kFkbN4E0UIGY6uvuMs4qZBxyfKxJRlPpLRwj9hhwe9B//kKR6fF2ktZoaYPFMMaxC/ZgdTV57NPK1WABrNriwXeQCYnnKIzo4ls8xxcPBRx39A1zWZSzmK41NSAryOS0vpE6KcJrATGFmcj0URsR59wk2MzT/yAKi/y293QGVCzbNMx6scjyNKmJehypIwGCQY2fAWTE+57zfVoZJ3/45IITwSZ5ZGOjBjr8YLNsRDfYhYsnO6RxHsi/1wDUdavJFNX/uz07oiIC7ecuvCLnU8UiHRDyNVAl5K7xwBVe6bgArp9Q/EQKpqkwpKzcgs8osbg3sbe1wH8ouVSQ0Gj1wTztLQY903sPs9W0+to9H6fwOSlfSCo9E+DoCAHBpLHYzjvhS0SmeB2AdoaLlI44dsnTTThps1hy4r+Oz/aFxTNoWhk9VH2DGS5MqtM8pqj3RxPje+U5riXTb/AHfVFMspt6fQJzE8QSBSqVy8r8eq6CaW5HeC5lQRb7ND2+yYPGpVq5R2E1zhcHyiBgiWD3TJfIDUVttbzIbf1sWQTbf2H2NF6oeotTrdcKV8aKqh87LgggVNHoL6NYP4ZQgNL1UC142SH6pamcFasXKJ8eC0Rrt00oN4XXRBIZLdX3LcF7BPMV4QCpclYwPMdT0zNhDUGmXPtCKX85e9AP34sSai/Gt9ieBa18yU79W5mrWuSQ8R4RIk4tl5PAyfVY/bdfqEOe1mD9ifVf9U3lMRC+6hxoYZKfDVMWdOyN9UkD/joB8RCrTLvloVpwFKOkX4WTT/1kgxFt7443B7Kw5Q/5g5OfL3Eq6Ydm66eAV/F+EK/i4CDuPNXpk78q8hYGOVVqB6sGhEeG4UUiJJKTrigX82Jg9QwmwnBXuYK8EvrFAOVLb2Bp/RLSuZI12ykSEU721FqVsG1/5qH81W9YZ/BD4U1pesil23Qcgdl/9Oi7PEXJR1rQ3bv/hoibunGQ9dQI81Iz/Jcm0RCvDYRTlpsb3IIUzqh0rY/MUmsBnxP32zpBQVY+/Kl0rM8yjsFf7igUrJsGbE99bJueNDyivtuy9XzR+Vr4BeztdcpyE6ZKl5CW/L9+2K3bKavrivnk49PJ80w6znY3iuh699zL3CuB/oEDEeE2Pxodzw3vteP9Tx2dk2DAH7xFyo3Rdt30TAsGrOcNHJUiISwRpgbm62QXuw691o0OGw39hI/JLH0e7jD3+HIzpdGFrh2b3Ka5f3iAe6yRmJFwbXdFOYjKSvJzizAMvMI6r5DfrwYhvgVxtLtuu3rXqBf/cujn7G/lZH/Fc56JcsPHFsxKM6cd9dDe/O9fVQ2jCUJsXsB3jIuGR7drkOmxxahU5To08TecSsggGzXLnt4cUstCNCOV4mCjshfRfoL4JQldt2XUrTGPshLybgOXtJq0G9wvt1cQPi/wGC3OKRt2kAAA==")).decode("utf-8")
+s=s.replace(marker,patch+marker,1)
+s=s.replace("V9-9.0 · Firebase 실시간 수업","V9-9.1 · Firebase 실시간 수업")
+s=s.replace("'V9-9.0 실시간'","'V9-9.1 실시간'")
+s=s.replace('<span class="version-badge">V9-9.0</span>','<span class="version-badge">V9-9.1</span>')
+s=s.replace("?student=1&v=990","?student=1&v=991")
+s=s.replace("&v=990","&v=991")
+# Structural checks
+required=["장면·에피소드별 기록","장면·에피소드 목록","data-v991-scene-map","data-v991-focus-scene","sceneMoodContext991","V9-9.1"]
+for x in required:
+    if x not in s: raise SystemExit(f"missing V9-9.1 marker: {x}")
+if s.count("const V991='V9-9.1'")!=1:
+    raise SystemExit("unexpected V991 marker count")
+# Syntax-check every inline JS block
+parts=re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>',s,re.I)
+for i,js in enumerate(parts):
+    q=Path(f'/tmp/drb_v991_{i}.js'); q.write_text(js,encoding='utf-8')
+    subprocess.run(['node','--check',str(q)],check=True)
+p.write_text(s,encoding='utf-8')
+print('V9-9.1 applied; JS syntax checks passed')
