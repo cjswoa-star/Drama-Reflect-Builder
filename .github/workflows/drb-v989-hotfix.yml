@@ -17,37 +17,8 @@ jobs:
       - name: Patch index.html
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          p=Path('index.html')
-          s=p.read_text(encoding='utf-8')
-          if 'function modal(){' in s:
-              raise SystemExit('modal already exists')
-          s=s.replace('V9-8.8','V9-8.9')
-          s=s.replace('&v=988','&v=989').replace('?student=1&v=988','?student=1&v=989')
-          modal=r'''function modal(){
- const groups=[
-  ['기본 흐름',['intro','choice','reflection','final']],
-  ['감정·성찰',['emotion','mood','connection']],
-  ['만남·공유',['meet','share']]
- ];
- return `<div class="modalbg"><div class="modal" role="dialog" aria-modal="true" aria-label="단계 추가"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><div><h3>단계 추가</h3><p>현재 선택한 단계 다음에 넣을 활동을 고르세요.</p></div><button class="btn ghost" data-close aria-label="닫기">✕ 닫기</button></div>${groups.map(([title,types])=>`<div class="category-title">${title}</div><div class="blockgrid">${types.map(type=>{const c=catalog[type];return `<button type="button" class="block" data-type="${type}" style="text-align:left"><div class="bi" style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:${c.color}">${c.icon}</div><b>${c.label}</b><small>${c.sub}<br>${c.desc}</small></button>`}).join('')}</div>`).join('')}</div></div>`
-}
-'''
-          marker='function commonTitle(b){'
-          if marker not in s: raise SystemExit('commonTitle marker not found')
-          s=s.replace(marker,modal+marker,1)
-          old="if(code.includes('network-request-failed')||code.includes('unavailable'))return 'Firebase 서버와 통신하지 못했습니다. 학교망·방화벽 또는 인터넷 연결을 확인한 뒤 다시 시도해 주세요.';"
-          new="if(code.includes('firebase-sdk-unavailable'))return 'Firebase SDK를 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.';if(code.includes('network-request-failed')||code.includes('unavailable'))return 'Firebase 서버와 통신하지 못했습니다. 학교망·방화벽 또는 인터넷 연결을 확인한 뒤 다시 시도해 주세요.';"
-          if old in s: s=s.replace(old,new,1)
-          p.write_text(s,encoding='utf-8')
-          parts=re.findall(r'<script>([\s\S]*?)</script>',s)
-          Path('/tmp/drb.js').write_text(parts[-1],encoding='utf-8')
-          PY
-          node --check /tmp/drb.js
-          grep -q 'function modal(){' index.html
-          grep -q 'V9-8.9' index.html
+          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCmltcG9ydCByZSwgc3VicHJvY2VzcwpwPVBhdGgoJ2luZGV4Lmh0bWwnKQpzPXAucmVhZF90ZXh0KGVuY29kaW5nPSd1dGYtOCcpCmlmICdmdW5jdGlvbiBtb2RhbCgpeycgaW4gczoKICAgIHJhaXNlIFN5c3RlbUV4aXQoJ21vZGFsIGFscmVhZHkgZXhpc3RzJykKcz1zLnJlcGxhY2UoJ1Y5LTguOCcsJ1Y5LTguOScpCnM9cy5yZXBsYWNlKCcmdj05ODgnLCcmdj05ODknKS5yZXBsYWNlKCc/c3R1ZGVudD0xJnY9OTg4JywnP3N0dWRlbnQ9MSZ2PTk4OScpCm1vZGFsPSIiImZ1bmN0aW9uIG1vZGFsKCl7CiBjb25zdCBncm91cHM9WwogIFsn6riw67O4IO2dkOumhCcsWydpbnRybycsJ2Nob2ljZScsJ3JlZmxlY3Rpb24nLCdmaW5hbCddXSwKICBbJ+qwkOyglcK37ISx7LCwJyxbJ2Vtb3Rpb24nLCdtb29kJywnY29ubmVjdGlvbiddXSwKICBbJ+unjOuCqMK36rO17JygJyxbJ21lZXQnLCdzaGFyZSddXQogXTsKIHJldHVybiBgPGRpdiBjbGFzcz1cIm1vZGFsYmdcIj48ZGl2IGNsYXNzPVwibW9kYWxcIiByb2xlPVwiZGlhbG9nXCIgYXJpYS1tb2RhbD1cInRydWVcIiBhcmlhLWxhYmVsPVwi64uo6rOEIOy2lOqwgFwiPjxkaXYgc3R5bGU9XCJkaXNwbGF5OmZsZXg7anVzdGlmeS1jb250ZW50OnNwYWNlLWJldHdlZW47Z2FwOjEycHg7YWxpZ24taXRlbXM6ZmxleC1zdGFydFwiPjxkaXY+PGgzPuuLqOqzhCDstpTqsIA8L2gzPjxwPu2YhOyerCDshKDtg53tlZwg64uo6rOEIOuLpOydjOyXkCDrhKPsnYQg7Zmc64+Z7J2EIOqzoOultOyEuOyalC48L3A+PC9kaXY+PGJ1dHRvbiBjbGFzcz1cImJ0biBnaG9zdFwiIGRhdGEtY2xvc2UgYXJpYS1sYWJlbD1cIuuLq+q4sFwiPuKclSDri6vquLA8L2J1dHRvbj48L2Rpdj4ke2dyb3Vwcy5tYXAoKFt0aXRsZSx0eXBlc10pPT5gPGRpdiBjbGFzcz1cImNhdGVnb3J5LXRpdGxlXCI+JHt0aXRsZX08L2Rpdj48ZGl2IGNsYXNzPVwiYmxvY2tncmlkXCI+JHt0eXBlcy5tYXAodHlwZT0+e2NvbnN0IGM9Y2F0YWxvZ1t0eXBlXTtyZXR1cm4gYDxidXR0b24gdHlwZT1cImJ1dHRvblwiIGNsYXNzPVwiYmxvY2tcIiBkYXRhLXR5cGU9XCIke3R5cGV9XCIgc3R5bGU9XCJ0ZXh0LWFsaWduOmxlZnRcIj48ZGl2IGNsYXNzPVwiYmlcIiBzdHlsZT1cIndpZHRoOjM4cHg7aGVpZ2h0OjM4cHg7Ym9yZGVyLXJhZGl1czoxMnB4O2Rpc3BsYXk6Z3JpZDtwbGFjZS1pdGVtczpjZW50ZXI7YmFja2dyb3VuZDoke2MuY29sb3J9XCI+JHtjLmljb259PC9kaXY+PGI+JHtjLmxhYmVsfTwvYj48c21hbGw+JHtjLnN1Yn08YnI+JHtjLmRlc2N9PC9zbWFsbD48L2J1dHRvbj5gfSkuam9pbignJyl9PC9kaXY+YCkuam9pbignJyl9PC9kaXY+PC9kaXY+YAp9CiIiIgptYXJrZXI9J2Z1bmN0aW9uIGNvbW1vblRpdGxlKGIpeycKYXNzZXJ0IG1hcmtlciBpbiBzCnM9cy5yZXBsYWNlKG1hcmtlcixtb2RhbCttYXJrZXIsMSkKb2xkPSJpZihjb2RlLmluY2x1ZGVzKCduZXR3b3JrLXJlcXVlc3QtZmFpbGVkJyl8fGNvZGUuaW5jbHVkZXMoJ3VuYXZhaWxhYmxlJykpcmV0dXJuICdGaXJlYmFzZSDshJzrsoTsmYAg7Ya17Iug7ZWY7KeAIOuqu+2WiOyKteuLiOuLpC4g7ZWZ6rWQ66edwrfrsKntmZTrsr0g65iQ64qUIOyduO2EsOuEtyDsl7DqsrDsnYQg7ZmV7J247ZWcIOuSpCDri6Tsi5wg7Iuc64+E7ZW0IOyjvOyEuOyalC4nOyIKbmV3PSJpZihjb2RlLmluY2x1ZGVzKCdmaXJlYmFzZS1zZGstdW5hdmFpbGFibGUnKSlyZXR1cm4gJ0ZpcmViYXNlIFNES+ulvCDrtojrn6zsmKTsp4Ag66q77ZaI7Iq164uI64ukLiDtjpjsnbTsp4Drpbwg7IOI66Gc6rOg7Lmo7ZWcIOuSpCDri6Tsi5wg7Iuc64+E7ZW0IOyjvOyEuOyalC4nO2lmKGNvZGUuaW5jbHVkZXMoJ25ldHdvcmstcmVxdWVzdC1mYWlsZWQnKXx8Y29kZS5pbmNsdWRlcygndW5hdmFpbGFibGUnKSlyZXR1cm4gJ0ZpcmViYXNlIOyEnOuyhOyZgCDthrXsi6DtlZjsp4Ag66q77ZaI7Iq164uI64ukLiDtlZnqtZDrp53Ct+uwqe2ZlOuyvSDrmJDripQg7J247YSw64S3IOyXsOqysOydhCDtmZXsnbjtlZQg65KkIOuLpOyLnCDsi5zrj4TtlbQg7KO87IS47JqULic7IgppZiBvbGQgaW4gczogcz1zLnJlcGxhY2Uob2xkLG5ldywxKQpwLndyaXRlX3RleHQocyxlbmNvZGluZz0ndXRmLTgnKQpwYXJ0cz1yZS5maW5kYWxsKHInPHNjcmlwdD4oW1xcc1xcU10qPyk8L3NjcmlwdD4nLHMpClBhdGgoJy90bXAvZHJiLmpzJykud3JpdGVfdGV4dChwYXJ0c1stMV0sZW5jb2Rpbmc9J3V0Zi04JykKc3VicHJvY2Vzcy5ydW4oWydub2RlJywnLS1jaGVjaycsJy90bXAvZHJiLmpzJ10sY2hlY2s9VHJ1ZSkKYXNzZXJ0ICdmdW5jdGlvbiBtb2RhbCgpeycgaW4gcyBhbmQgJ1Y5LTguOScgaW4gcwo=' | base64 -d > /tmp/patch.py
+          python /tmp/patch.py
       - name: Commit patch and remove temporary workflow
         shell: bash
         run: |
