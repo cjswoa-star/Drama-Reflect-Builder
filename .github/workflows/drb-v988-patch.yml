@@ -1,0 +1,74 @@
+name: DRB V9-8.8 live class patch
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/drb-v988-patch.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Patch index.html
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('V9-8.7','V9-8.8')
+          s=s.replace('&v=987','&v=988').replace('?student=1&v=987','?student=1&v=988')
+          css='''
+          /* V9-8.8: live class creation diagnostics */
+          .live-class-feedback{margin:0 0 14px;border-radius:13px;padding:11px 13px;font-size:12px;line-height:1.5;display:flex;gap:10px;align-items:flex-start}.live-class-feedback.info{background:#eef7fd;border:1px solid #cfe4f1;color:#345d78}.live-class-feedback.ok{background:#f1faf5;border:1px solid #cee5d8;color:#34654c}.live-class-feedback.error{background:#fff4f3;border:1px solid #efcbc7;color:#8b403b}.live-class-feedback b{display:block;margin-bottom:2px}.live-class-feedback code{display:block;margin-top:5px;font-size:10px;word-break:break-all;opacity:.86}.live-class-feedback .spin{display:inline-block;animation:drbspin .9s linear infinite}@keyframes drbspin{to{transform:rotate(360deg)}}
+          '''
+          s=s.replace('\n</style>',css+'\n</style>',1)
+          old="""function firebaseErrorMessage(e){const code=e?.code||'',msg=String(e?.message||'');if(code.includes('unauthorized-domain'))return '승인된 도메인에 cjswoa-star.github.io를 추가해 주세요.';if(code.includes('popup-blocked'))return '브라우저가 Google 로그인 팝업을 차단했습니다.';if(code.includes('operation-not-allowed')||code.includes('admin-restricted-operation')||msg.includes('OPERATION_NOT_ALLOWED'))return '학생 익명 로그인이 꺼져 있습니다. Firebase Authentication에서 익명(Anonymous) 로그인을 사용 설정해 주세요.';if(code.includes('network-request-failed'))return '인터넷 연결이 불안정합니다. 연결을 확인한 뒤 다시 입장해 주세요.';if(code.includes('permission-denied'))return 'Firestore 보안 규칙에서 학생 입장이 거부되었습니다. 최신 규칙이 게시되었는지 확인해 주세요.';if(code.includes('teacher-session-mismatch'))return '현재 교사 로그인 계정이 이 수업을 만든 계정과 다릅니다. 교사 계정으로 다시 로그인해 주세요.';if(code.includes('student-separate-browser'))return '교사로 로그인된 브라우저입니다. 학생 테스트는 다른 기기나 시크릿 창에서 열어 주세요.';return e?.message||'Firebase 연결 중 오류가 발생했습니다.'}
+          async function ensureTeacherAuth(){if(!initFirebase())throw new Error('Firebase SDK를 불러오지 못했습니다.');const u=fbAuth.currentUser;if(u&&!u.isAnonymous)return u;const provider=new firebase.auth.GoogleAuthProvider();const result=await fbAuth.signInWithPopup(provider);return result.user}"""
+          new="""function firebaseErrorMessage(e,context='general'){const code=String(e?.code||''),msg=String(e?.message||'');if(code.includes('unauthorized-domain'))return '현재 주소가 Firebase 승인 도메인에 없습니다. cjswoa-star.github.io 등록을 확인해 주세요.';if(code.includes('popup-blocked'))return '브라우저가 Google 로그인 팝업을 차단했습니다. 주소창의 팝업 허용 후 다시 눌러 주세요.';if(code.includes('popup-closed-by-user'))return 'Google 로그인 창이 닫혔습니다. 다시 실시간 수업을 눌러 로그인해 주세요.';if(code.includes('cancelled-popup-request'))return 'Google 로그인 요청이 중복되어 취소되었습니다. 한 번만 다시 눌러 주세요.';if(code.includes('account-exists-with-different-credential'))return '같은 이메일이 다른 로그인 방식으로 등록되어 있습니다. Firebase Authentication의 사용자 계정을 확인해 주세요.';if(code.includes('operation-not-allowed')||code.includes('admin-restricted-operation')||msg.includes('OPERATION_NOT_ALLOWED'))return context==='student'?'Firebase Authentication에서 익명(Anonymous) 로그인이 비활성화되어 있습니다.':'Firebase Authentication에서 Google 로그인이 비활성화되어 있거나 현재 로그인 방식이 허용되지 않습니다.';if(code.includes('network-request-failed')||code.includes('unavailable'))return 'Firebase 서버와 통신하지 못했습니다. 학교망·방화벽 또는 인터넷 연결을 확인한 뒤 다시 시도해 주세요.';if(code.includes('permission-denied'))return context==='teacher'?'Firestore가 교사의 수업 생성을 거부했습니다. 게시된 firestore.rules와 현재 Google 로그인 계정을 확인해 주세요.':'Firestore 보안 규칙에서 요청이 거부되었습니다.';if(code.includes('failed-precondition'))return 'Firestore 설정 또는 브라우저 저장소 상태 때문에 요청을 처리하지 못했습니다. 새로고침 후 다시 시도해 주세요.';if(code.includes('teacher-session-mismatch'))return '현재 교사 로그인 계정이 이 수업을 만든 계정과 다릅니다. 교사 계정으로 다시 로그인해 주세요.';if(code.includes('student-separate-browser'))return '교사로 로그인된 브라우저입니다. 학생 테스트는 다른 기기나 시크릿 창에서 열어 주세요.';return msg||'Firebase 연결 중 오류가 발생했습니다.'}
+          function teacherHasGoogleProvider(user){return !!user&&!user.isAnonymous&&(user.providerData||[]).some(p=>p?.providerId==='google.com')}
+          async function ensureTeacherAuth(){if(!initFirebase())throw Object.assign(new Error('Firebase SDK를 불러오지 못했습니다.'),{code:'firebase-sdk-unavailable'});let u=fbAuth.currentUser;if(u&&!teacherHasGoogleProvider(u)){await fbAuth.signOut().catch(()=>{});u=null}if(!u){const provider=new firebase.auth.GoogleAuthProvider();provider.setCustomParameters({prompt:'select_account'});const result=await fbAuth.signInWithPopup(provider);u=result.user}if(!teacherHasGoogleProvider(u)){const e=new Error('Google 계정 인증을 확인하지 못했습니다.');e.code='teacher-not-google';throw e}await u.getIdToken(true);return u}"""
+          if old not in s: raise SystemExit('auth block not found')
+          s=s.replace(old,new,1)
+          helper="""function setLiveClassFeedback(kind,message,detail=''){state.liveClassFeedback={kind,message,detail};const box=document.querySelector('[data-live-class-feedback]');if(box){box.className=`live-class-feedback ${kind}`;box.innerHTML=`<div>${kind==='info'?'<span class=\\"spin\\">◌</span>':kind==='ok'?'✓':'!'}</div><div><b>${esc(message)}</b>${detail?`<code>${esc(detail)}</code>`:''}</div>`;box.hidden=false}const btn=document.querySelector('[data-action=\\"onlineClassStart\\"]');if(btn){btn.disabled=kind==='info';btn.textContent=kind==='info'?'☁ 연결 중…':'☁ 실시간 수업'}}
+          function clearLiveClassFeedback(){state.liveClassFeedback=null;const box=document.querySelector('[data-live-class-feedback]');if(box)box.hidden=true;const btn=document.querySelector('[data-action=\\"onlineClassStart\\"]');if(btn){btn.disabled=false;btn.textContent='☁ 실시간 수업'}}
+          """
+          s=s.replace('async function startFirebaseClass()',helper+'async function startFirebaseClass()',1)
+          a=s.index('async function startFirebaseClass()')
+          b=s.index('async function resumeFirebaseClass()')
+          repl="""async function startFirebaseClass(){if(!state.activity)return;const errors=validateForClass(state.activity);if(errors.length){setLiveClassFeedback('error','수업을 만들기 전에 활동 설정을 확인해 주세요.',errors.join(' / '));toast(errors[0]);return}let claimedCode='',ref=null;try{clearLiveClassFeedback();setLiveClassFeedback('info','1/4 · Google 교사 로그인을 확인하고 있습니다.');const teacher=await ensureTeacherAuth();setLiveClassFeedback('info','2/4 · 참여 코드를 만들고 있습니다.');ref=fbDb.collection('sessions').doc();claimedCode=await claimJoinCode(ref.id,teacher.uid);setLiveClassFeedback('info','3/4 · Firestore에 실시간 수업을 만들고 있습니다.');const now=firebase.firestore.FieldValue.serverTimestamp();await ref.set({teacherUid:teacher.uid,activityId:state.activity.id,activityTitle:state.activity.title,status:'draft',entryOpen:true,currentBlock:0,blockCount:state.activity.blocks.length,blockIds:state.activity.blocks.map(b=>b.id),activity:clone(state.activity),createdAt:now,updatedAt:now});state.sessionSetup={id:ref.id,firebaseSessionId:ref.id,activityId:state.activity.id,activityTitle:state.activity.title,blockIds:state.activity.blocks.map(b=>b.id),code:claimedCode,status:'draft',mode:'firebase',currentBlock:0,entryOpen:true,participants:[],responses:{},meetingHistory:[]};rememberTeacherSession({sessionId:ref.id,activityId:state.activity.id,activityTitle:state.activity.title,code:claimedCode,status:'draft'});state.facilitatorPreview=false;state.liveClassFeedback={kind:'ok',message:'실시간 수업 대기실이 열렸습니다.',detail:`참여 코드 ${claimedCode}`};subscribeTeacherFirebaseSession(ref.id);render();toast('실시간 수업 대기실을 열었습니다.')}catch(e){console.error('startFirebaseClass failed',e);if(claimedCode&&fbDb){try{await fbDb.collection('joinCodes').doc(claimedCode).delete()}catch(_){}}const code=String(e?.code||'unknown');const msg=firebaseErrorMessage(e,'teacher');setLiveClassFeedback('error',msg,`${code} · ${String(e?.message||'')}`);toast(msg)}}
+          """
+          s=s[:a]+repl+s[b:]
+          s=s.replace('studentJoin:null,shareBoard:false};','studentJoin:null,shareBoard:false,liveClassFeedback:null};',1)
+          target='</div></div><div class="editor"><section class="panel">'
+          insert='</div></div>${state.liveClassFeedback?`<div class="live-class-feedback ${esc(state.liveClassFeedback.kind)}" data-live-class-feedback><div>${state.liveClassFeedback.kind===\'info\'?\'<span class="spin">◌</span>\':state.liveClassFeedback.kind===\'ok\'?\'✓\':\'!\'}</div><div><b>${esc(state.liveClassFeedback.message)}</b>${state.liveClassFeedback.detail?`<code>${esc(state.liveClassFeedback.detail)}</code>`:\'\'}</div></div>`:`<div class="live-class-feedback info" data-live-class-feedback hidden></div>`}<div class="editor"><section class="panel">'
+          if target not in s: raise SystemExit('editor target not found')
+          s=s.replace(target,insert,1)
+          s=s.replace("const m=firebaseErrorMessage(e);setStudentJoinFeedback(m,'error');toast(m)","const m=firebaseErrorMessage(e,'student');setStudentJoinFeedback(m,'error');toast(m)")
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Syntax check
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text(encoding='utf-8')
+          parts=re.findall(r'<script>([\s\S]*?)</script>',s)
+          Path('/tmp/drb.js').write_text(parts[-1],encoding='utf-8')
+          PY
+          node --check /tmp/drb.js
+      - name: Commit patch and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name 'chatgpt-drb-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          rm -f .github/workflows/drb-v988-patch.yml
+          git add index.html .github/workflows/drb-v988-patch.yml
+          git commit -m 'fix: harden realtime class creation V9-8.8'
+          git push
