@@ -31,6 +31,10 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/sessions/$(sessionId)/participants/$(request.auth.uid));
     }
 
+    function sessionNotEnded(sessionId) {
+      return sessionDoc(sessionId).data.status != 'ended';
+    }
+
     match /sessions/{sessionId} {
       allow create: if isGoogleUser()
         && request.resource.data.teacherUid == request.auth.uid
@@ -46,6 +50,7 @@ service cloud.firestore {
         allow create: if isAnonymousUser()
           && participantId == request.auth.uid
           && sessionDoc(sessionId).data.entryOpen == true
+          && sessionNotEnded(sessionId)
           && request.resource.data.keys().hasOnly([
             'uid', 'name', 'role', 'status', 'currentBlock',
             'joinedAt', 'lastSeen'
@@ -68,6 +73,7 @@ service cloud.firestore {
           || (
             isAnonymousUser()
             && participantId == request.auth.uid
+            && sessionNotEnded(sessionId)
             && request.resource.data.uid == resource.data.uid
             && request.resource.data.role == resource.data.role
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -85,6 +91,7 @@ service cloud.firestore {
         allow create: if isAnonymousUser()
           && studentId == request.auth.uid
           && isParticipant(sessionId)
+          && sessionNotEnded(sessionId)
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.keys().hasOnly(['uid', 'blocks', 'updatedAt'])
           && request.resource.data.keys().hasAll(['uid']);
@@ -101,6 +108,7 @@ service cloud.firestore {
             isAnonymousUser()
             && studentId == request.auth.uid
             && isParticipant(sessionId)
+            && sessionNotEnded(sessionId)
             && resource.data.uid == request.auth.uid
             && request.resource.data.uid == request.auth.uid
             && request.resource.data.keys().hasOnly(['uid', 'blocks', 'updatedAt'])
